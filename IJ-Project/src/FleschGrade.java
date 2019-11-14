@@ -1,47 +1,75 @@
-import java.util.StringTokenizer;
-import java.io.FileReader;
-import java.io.BufferedReader;
+import java.util.Scanner;
+import java.util.regex.*;
 import java.io.File;
 public class FleschGrade {
 
-    public static void main(String[] args) throws Exception{
-         String wordDelim = ".,': ;?{}[]=-+_!@#$%^&*()";
-         String sentenceDelim = ".,;?!";
-         String syllableDelim = "aeiouy";
-        File file = new File(args[0]); // add exception
-        BufferedReader buffRead = new BufferedReader(new FileReader(file));
-        String line;
-        String word;
-        String[] splitedWord;
-        int numOfWords = 0;
-        int totalNumOfSyllables = 0;
-        int numOfSentences = 0;
-        // check better way
-        while((line = buffRead.readLine()) != null){
-            StringTokenizer splitedLine = new StringTokenizer(line , wordDelim);
-            StringTokenizer sentenceSplit = new StringTokenizer(line , sentenceDelim);
-            numOfWords += splitedLine.countTokens();
-            numOfSentences += sentenceSplit.countTokens();
-            //might want to change to sentenceSplit instead of splitedLine
-            while(splitedLine.hasMoreTokens()){
-                int numOfSyllables = 0;
-                word = splitedLine.nextToken();
-                splitedWord = word.split("(e\\z)");
-                if(splitedWord.length > 0) {
-                    splitedWord = splitedWord[0].split("[^" + syllableDelim + "]" + "+");
-                    for(String s : splitedWord){
-                        if(! s.equals("")) {
-                            numOfSyllables++;
-                        }
+    public static int main(String[] args) throws Exception{
+        if(args.length != 1){
+            System.out.println("Worng number of arguments. This program expects one argument.");
+            return -1;
+        }
+        String wordDelim = "[.,: ;?\\{\\}\\[\\]=\\-\\+_!@#$%^&*\\(\\)]+";
+        String sentenceDelim = "[.,;?!]+";
+        String syllableDelim = "[aeiouyAEIOUY]+";
+        String sentence;
+        String[] words;
+        Pattern sentenceDelimPattern = Pattern.compile(sentenceDelim);
+        Pattern syllableDelimPattern = Pattern.compile(syllableDelim);
+        Scanner fileScanner = null;
+        File file = new File(args[0]);
+        if(! file.exists()){
+            System.out.println("File: " + args[0] + " does'nt exist.");
+            return -1;
+        }
+
+        double numOfWords = 0 , numOfSentences = 0 , totalNumOfSyllables = 0 , numOfSyllables = 0 , flesch = 0;
+        try {
+            fileScanner = new Scanner(file);
+            fileScanner.useDelimiter(sentenceDelimPattern);
+
+            while (fileScanner.hasNext()) {
+
+                sentence = fileScanner.next().strip();
+                if (sentence.equals("")) continue;
+                words = sentence.split(wordDelim);
+                for (String si : words) {
+                    numOfSyllables = 0;
+                    if (si.equals("")) continue;
+                    si = si.strip();
+                    if (si.equals("")) continue;
+                    numOfWords++;
+                    Matcher syllableMatcher = syllableDelimPattern.matcher(si);
+                    while (syllableMatcher.find()) {
+                        numOfSyllables++;
                     }
-                    numOfSyllables = numOfSyllables == 0 ? 1 : numOfSyllables;
+                    if (si.endsWith("e")) {
+                        numOfSyllables = (numOfSyllables == 1 || numOfSyllables == 0) ? 1 : (numOfSyllables - 1);
+                    }
+                    totalNumOfSyllables += numOfSyllables;
                 }
-                totalNumOfSyllables = totalNumOfSyllables + numOfSyllables;
+                numOfSentences++;
             }
         }
-        // add exception
-        double flesch = 206.835 - 84.6 * (totalNumOfSyllables / numOfWords) - 1.015 * (numOfWords / numOfSentences);
-        System.out.println("The result is: " + flesch);
+        catch (Exception e){
+            System.out.println("Something went wrong");
+        }
+        finally {
+            fileScanner.close();
+        }
+            if(numOfWords != 0 && numOfSentences != 0) {
+                flesch = 206.835 - (84.6 * (totalNumOfSyllables / numOfWords)) - (1.015 * (numOfWords / numOfSentences));
+                System.out.println("The result is: " + flesch);
+            }
+            else if(numOfWords == 0) {
+                System.out.println("The number of words is zero. Thus Flesch grade could'nt be calculated.");
+                return -1;
+            }
+            else if(numOfSentences == 0) {
+                System.out.println("The number of sentences is zero. Thus Flesch grade could'nt be calculated.");
+                return -1;
+            }
+    return 0;
     }
+
 
 }
